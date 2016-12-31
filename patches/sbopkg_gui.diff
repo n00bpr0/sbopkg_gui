@@ -1,0 +1,307 @@
+--- a/sbopkg_gui	2016-12-04 18:54:21.938156935 +0300
++++ b/sbopkg_gui	2016-12-31 12:21:58.473505261 +0300
+@@ -1,2 +1,3 @@
+ #!/usr/bin/env python
++# -*- coding: utf-8 -*-
+ 
+@@ -49,2 +50,5 @@
+ from PyQt4.QtGui import QSizePolicy
++from threading import Thread
++from PyQt4 import QtGui
++from PyQt4 import QtCore
+ 
+@@ -67,2 +71,4 @@
+         cfg_sbopkg_gui['terminal_app'] = 'konsole --nofork -e '
++    elif os.path.isfile('/usr/bin/xfce4-terminal'):
++        cfg_sbopkg_gui['terminal_app'] = 'xfce4-terminal --hide-menubar --title sbopkg --hold --command '
+     filename_conf = 'sbopkg_gui.conf.py'
+@@ -90,10 +96,10 @@
+ 
+-        self.setWindowTitle('sbopkg gui')
+-        self.resize(600, 400)
++        self.title()
++        self.resize(800, 500)
+ 
+         self.qtoolbar = QToolBar(self)
+-        self.qaction_update = QAction('Update', self)
++        self.qaction_update = QAction(u'Синхронизация', self)
+         self.qaction_update.triggered.connect(self.on_action_update)
+         self.qtoolbar.addAction(self.qaction_update)
+-        self.qaction_upgrade = QAction('Upgrade', self)
++        self.qaction_upgrade = QAction(u'Обновления', self)
+         self.qaction_upgrade.triggered.connect(self.on_action_upgrade)
+@@ -101,3 +107,3 @@
+         self.qtoolbar.addSeparator()
+-        self.qaction_install = QAction('Install', self)
++        self.qaction_install = QAction(u'Установить', self)
+         self.qaction_install.triggered.connect(self.on_action_install)
+@@ -105,3 +111,3 @@
+         self.qtoolbar.addAction(self.qaction_install)
+-        self.qaction_remove = QAction('Remove', self)
++        self.qaction_remove = QAction(u'Удалить', self)
+         self.qaction_remove.triggered.connect(self.on_action_remove)
+@@ -109,3 +115,3 @@
+         self.qtoolbar.addAction(self.qaction_remove)
+-        self.qaction_options = QAction('Options', self)
++        self.qaction_options = QAction(u'Опции', self)
+         self.qaction_options.triggered.connect(self.on_action_options)
+@@ -113,2 +119,6 @@
+         self.qtoolbar.addAction(self.qaction_options)
++	self.qtoolbar.addSeparator()
++        self.qaction_reload = QAction(u'Обновить данные', self)
++        self.qaction_reload.triggered.connect(self.on_action_reload)
++        self.qtoolbar.addAction(self.qaction_reload)
+         widget_empty = QWidget(self)
+@@ -116,3 +126,3 @@
+         self.qtoolbar.addWidget(widget_empty)
+-        self.qaction_about = QAction('About', self)
++        self.qaction_about = QAction(u'Справка', self)
+         self.qaction_about.triggered.connect(self.on_action_about)
+@@ -139,3 +149,3 @@
+         self.qtree_slackbuilds.itemDoubleClicked.connect(self.on_qtree_slackbuilds_double_clicked)
+-        header = QTreeWidgetItem(['Package', 'Version', 'Installed', 'Description'])
++        header = QTreeWidgetItem([u'Пакет', u'Версия', u'Установлено', u'Описание'])
+         self.qtree_slackbuilds.setHeaderItem(header)
+@@ -175,2 +185,11 @@
+ 
++    def title(self):
++        if os.path.isfile(cfg['slackbuilds_dir']+'/ChangeLog.txt'):
++            date = str('head -n 1 "'+cfg['slackbuilds_dir']+'/ChangeLog.txt" | tr -d "\n"')
++            changes = os.popen4(date)[1].read()
++	    self.setWindowTitle('sbopkg gui ('+changes+')')
++        else:
++            self.setWindowTitle('sbopkg gui')
++
++
+     def init_slackbuilds(self):
+@@ -198,5 +217,5 @@
+         except IOError as err:
+-            print('IOError: ' + str(err))
+-            QMessageBox.critical(self, 'Error',
+-                    'Unable to open '+filename_slackbuilds,
++            print('IOError: '+str(err))
++            QMessageBox.critical(self, u'Ошибка',
++                    u'Невозможно открыть '+filename_slackbuilds,
+                     QMessageBox.Cancel, QMessageBox.Cancel)
+@@ -207,3 +226,3 @@
+             for i in range(1, len(elements)-3):
+-                name += '-' + elements[i]
++                name += '-'+elements[i]
+             if name in self.slackbuilds:
+@@ -291,4 +310,4 @@
+             except IOError as err:
+-                print('IOError: ' + str(err))
+-                readme = 'Error: Unable to open '+filename_readme
++                print('IOError: '+str(err))
++		readme = u'Ошибка: Невозможно открыть '+filename_readme
+             self.qlabel_readme.setText(readme)
+@@ -304,3 +323,3 @@
+                     str_requires += require+' '
+-            self.qlabel_requires.setText('Requires: '+str_requires)
++            self.qlabel_requires.setText(u'Требуется: '+str_requires)
+             if str_requires:
+@@ -324,5 +343,5 @@
+             except IOError as err:
+-                print('IOError: ' + str(err))
+-            self.qlabel_homepage.setText('Homepage: <a href="'+homepage+'">'+homepage+'</a>')
+-            self.qlabel_maintainer.setText('Maintainer: '+maintainer+' <'+email+'>')
++                print('IOError: '+str(err))
++            self.qlabel_homepage.setText(u'Сайт: <a href="'+homepage+'">'+homepage+'</a>')
++            self.qlabel_maintainer.setText(u'Сопровождающий: '+maintainer+' <'+email+'>')
+         else:
+@@ -376,5 +395,5 @@
+                     except IOError as err:
+-                        print('IOError: ' + str(err))
++                        print('IOError: '+str(err))
+                     if readme:
+-                        QMessageBox.information(self, 'README '+sb_name, readme)
++                        QMessageBox.about(self, 'README '+sb_name, readme)
+ 
+@@ -382,3 +401,3 @@
+     def on_action_update(self):
+-        os.system(cfg['terminal_app'] + ' sudo /usr/sbin/sbopkg -r')
++        os.system(cfg['terminal_app']+'"sudo /usr/sbin/sbopkg -r"')
+         self.init_slackbuilds()
+@@ -386,2 +405,3 @@
+         self.update_qtree_slackbuilds()
++        self.title()
+ 
+@@ -403,3 +423,3 @@
+                                     except ValueError as err:
+-                                        print('ValueError: ' + str(err))
++                                        print('ValueError: '+str(err))
+                                         slackbuild_build = 1
+@@ -407,5 +427,5 @@
+                     except IOError as err:
+-                        print('IOError: ' + str(err))
++                        print('IOError: '+str(err))
+                     if slackbuild.version != slackbuild.installed_version or \
+-                            not slackbuild.installed_fullname.endswith(str(slackbuild_build) + cfg['sbo_tag']):
++                            not slackbuild.installed_fullname.endswith(str(slackbuild_build)+cfg['sbo_tag']):
+                         upgrades.append(name)
+@@ -416,8 +436,3 @@
+             requires = self.filter_installed(requires)
+-            cmd = 'sudo /usr/sbin/sbopkg -i '
+-            if len(requires) > 0:
+-                cmd += '"'+' '.join(requires)+' '+' '.join(upgrades)+'"'
+-            else:
+-                cmd += '"'+' '.join(upgrades)+'"'
+-            msg = 'Newer versions of the following packages are available:\n'
++            msg = u'Версии следующих пакетов различаются:\n'
+             msg += ' '.join(upgrades)+'\n'
+@@ -425,15 +440,7 @@
+                 msg += '\n'
+-                msg += 'The following additional packages need to be installed:\n'
++                msg += u'Необходимо дополнительно установить следующие пакеты:\n'
+                 msg += ' '.join(requires)+'\n'
+-            msg += '\n'
+-            msg += 'Do you want to execute the following command?\n'
+-            msg += cmd+'\n'
+-            ret = QMessageBox.question(self, 'Upgrade', msg,
+-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+-            if ret == QMessageBox.Yes:
+-                os.system(cfg['terminal_app'] + ' ' + cmd)
+-                self.init_slackbuilds()
+-                self.update_qtree_slackbuilds()
++            QMessageBox.information(self, u'Обновления', msg)
+         else:
+-            QMessageBox.information(self, 'Upgrade', 'No upgrades found.')
++            QMessageBox.information(self, u'Обновления', u'Обновления не найдены.')
+ 
+@@ -444,8 +451,8 @@
+         requires = self.filter_installed(requires)
+-        self.show_readmes(requires + [sb_name])
+-        cmd = 'sudo /usr/sbin/sbopkg -i '
++        self.show_readmes(requires+[sb_name])
++        cmd = '"sudo /usr/sbin/sbopkg -i '
+         if len(requires) > 0:
+-            cmd += '"'+' '.join(requires)+' '+sb_name+'"'
++            cmd += '\''+' '.join(requires)+' '+sb_name+'\'"'
+         else:
+-            cmd += sb_name
++            cmd += sb_name+'"'
+         msg = ''
+@@ -455,27 +462,23 @@
+             warning = True
+-            msg += sb_name + ' was installed from another source.\n'
+-            msg += 'Package: ' + installed_fullname + '\n'
++            msg += u'Пакет '+'"'+installed_fullname+'"'+u' установлен из другого источника.\n'
+             msg += '\n'
+-            msg += 'Do you want to build and install ' + sb_name + ' anyway?\n'
+-            msg += '(not recommended)\n'
++            msg += u'Вы хотите скомпилировать и установить '+sb_name+u' в любом случае?\n'
+         else:
+-            msg += 'Do you want to build and install ' + sb_name + '?\n'
++            msg += u'Вы хотите скомпилировать и установить '+sb_name+'?\n'
+         if len(requires) > 0:
+             msg += '\n'
+-            msg += sb_name+' requires the following additional packages to be installed:\n'
++            msg += sb_name+u' дополнительно потребует установить следующие пакеты:\n'
+             msg += ' '.join(requires)+'\n'
+         msg += '\n'
+-        msg += 'Do you want to execute the following command?\n'
+-        msg += cmd+'\n'
++        msg += u'Команда: '+cmd+'\n'
+         ret = QMessageBox.No
+         if warning:
+-            ret = QMessageBox.warning(self, 'Install '+sb_name, msg,
++            ret = QMessageBox.warning(self, u'Установка '+sb_name, msg,
+                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+         else:
+-            ret = QMessageBox.question(self, 'Install '+sb_name, msg,
++            ret = QMessageBox.question(self, u'Установка '+sb_name, msg,
+                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+         if ret == QMessageBox.Yes:
+-            os.system(cfg['terminal_app'] + ' ' + cmd)
+-            self.init_slackbuilds()
+-            self.update_qtree_slackbuilds()
++            install = Thread(target = lambda: os.system(cfg['terminal_app']+' '+cmd))
++            install.start()
+ 
+@@ -490,8 +493,8 @@
+         if len(required_by) > 0:
+-            msg = sb_name+' is required by the following packages:\n'
++            msg = sb_name+u' необходим для следующих пакетов:\n'
+             msg += ' '.join(required_by)+'\n'
+-            QMessageBox.critical(self, 'Remove '+sb_name, msg,
++            QMessageBox.critical(self, u'Удаление '+sb_name, msg,
+                     QMessageBox.Cancel, QMessageBox.Cancel)
+         else:
+-            cmd = 'sudo /sbin/removepkg '+sb_name
++            cmd = '"sudo /sbin/removepkg '+sb_name+'"'
+             msg = ''
+@@ -501,23 +504,19 @@
+                 warning = True
+-                msg += sb_name + ' was installed from another source.\n'
+-                msg += 'Package: ' + installed_fullname + '\n'
++                msg += u'Пакет '+'"'+installed_fullname+'"'+u' установлен из другого источника.\n'
+                 msg += '\n'
+-                msg += 'Do you want to remove ' + sb_name + ' anyway?\n'
+-                msg += '(not recommended)\n'
++                msg += u'Вы хотите удалить '+sb_name+u' в любом случае?\n'
+             else:
+-                msg += 'Do you want to remove '+sb_name+'?\n'
++                msg += u'Вы хотите удалить '+sb_name+'?\n'
+             msg += '\n'
+-            msg += 'Do you want to execute the following command?\n'
+-            msg += cmd+'\n'
++            msg += u'Команда: '+cmd+'\n'
+             ret = QMessageBox.No
+             if warning:
+-                ret = QMessageBox.warning(self, 'Remove '+sb_name, msg,
++                ret = QMessageBox.warning(self, u'Удаление '+sb_name, msg,
+                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+             else:
+-                ret = QMessageBox.question(self, 'Remove '+sb_name, msg,
++                ret = QMessageBox.question(self, u'Удаление '+sb_name, msg,
+                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+             if ret == QMessageBox.Yes:
+-                os.system(cfg['terminal_app'] + ' ' + cmd)
+-                self.init_slackbuilds()
+-                self.update_qtree_slackbuilds()
++                remove = Thread(target = lambda: os.system(cfg['terminal_app']+' '+cmd))
++                remove.start()
+ 
+@@ -534,12 +533,18 @@
+             pass
+-        (text, ok) = QInputDialog.getText(self, sb_name, 'Options:', QLineEdit.Normal, options)
++        (text, ok) = QInputDialog.getText(self, sb_name, u'Опции:', QLineEdit.Normal, options)
+         if ok:
+             options = str(text)
+-            cmd = 'sudo bash -c "echo -n \''+options+'\' > '+filename_options+'"'
+-            msg = 'Do you want to execute the following command?\n'
+-            msg += cmd + '\n'
+-            ret = QMessageBox.question(self, 'Options '+sb_name, msg,
++            cmd = '"sudo bash -c \'echo -n '+options+' > '+filename_options+'\'"'
++            msg = u'Вы хотите осуществить исполнение команды?\n'
++            msg += '\n'
++            msg += cmd+'\n'
++            ret = QMessageBox.question(self, u'Опции '+sb_name, msg,
+                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+             if ret == QMessageBox.Yes:
+-                os.system(cfg['terminal_app'] + ' ' + cmd)
++                os.system(cfg['terminal_app']+' '+cmd)
++
++
++    def on_action_reload(self):
++        self.init_slackbuilds()
++        self.update_qtree_slackbuilds()
+ 
+@@ -548,3 +553,16 @@
+         msg = 'sbopkg gui\n'+__date__+'\n'+__license__
+-        QMessageBox.about(self, 'About sbopkg gui', msg)
++        QMessageBox.about(self, u'Справка sbopkg gui', msg)
++
++
++    def pause(self):
++        if os.path.isfile('/usr/share/sbopkg_gui/bin/tetris'):
++            tetris = Thread(target = lambda: os.system('"/usr/share/sbopkg_gui/bin/tetris"'))
++            tetris.start()
++
++
++    def keyPressEvent(self, event):
++        if event.key() == QtCore.Qt.Key_Pause:
++            self.pause()
++        if event.key() == QtCore.Qt.Key_Escape:
++            self.close()
+ 
