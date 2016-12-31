@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=sbopkg gui
+GenericName=Package Manager
+Comment=Install and remove software
+Exec=sbopkg_gui
+Categories=System;

@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# Сценарий командной оболочки Slackware для сборки sbopkg_gui
+
+# Copyright 2017
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+PRGNAM=sbopkg_gui
+VERSION=${VERSION:-20161204}
+BUILD=${BUILD:-1}
+TAG=${TAG:-_np}
+
+ARCH=noarch
+
+CWD=$(pwd)
+TMP=${TMP:-/tmp/NP}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+OSVERSION=""
+
+set -e
+
+rm -rf $PKG
+mkdir -p $TMP $PKG $OUTPUT
+
+OSVERSION="$(cat /etc/slackware-version | awk '{print $2}')"
+
+mkdir -p $PKG/etc/$PRGNAM
+cat >> $PKG/etc/$PRGNAM/$PRGNAM.conf.py << EOF
+cfg_sbopkg_gui['slackbuilds_dir'] = '/var/lib/sbopkg/SBo/$OSVERSION'
+EOF
+
+mkdir -p $PKG/usr/bin
+cat $CWD/$PRGNAM > $PKG/usr/bin/$PRGNAM
+cd  $PKG/usr/bin
+patch -p1 < $CWD/patches/$PRGNAM.diff
+cd -
+chmod 0755 $PKG/usr/bin/$PRGNAM
+
+mkdir -p $PKG/usr/share/$PRGNAM/bin
+cat $CWD/tetris > $PKG/usr/share/$PRGNAM/bin/tetris
+chmod 0755 $PKG/usr/share/$PRGNAM/bin/tetris
+
+mkdir -p $PKG/usr/share/applications
+cat $CWD/$PRGNAM.desktop > $PKG/usr/share/applications/$PRGNAM.desktop
+
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
+
+cd $PKG
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}
